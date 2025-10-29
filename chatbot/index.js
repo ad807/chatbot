@@ -4,7 +4,7 @@ const chatContainer = document.querySelector('#chat-container');
 
 ask.addEventListener('click', handleAsk);
 
-input.addEventListener('keydown', (event) => {
+input.addEventListener('keyup', (event) => {
     if (event.key === 'Enter') {
         handleAsk();
     }
@@ -20,7 +20,22 @@ async function handleAsk() {
 }
 
 async function generateResponse(text) {
-    const response = await fetch('https://localhost:8000/chat', {
+
+    const msg = document.createElement('div');
+    msg.className = 'my-6 bg-neutral-800 p-3 rounded-xl ml-auto max-w-fit'
+    msg.textContent = text;
+    chatContainer.appendChild(msg);
+    input.value = '';
+   
+    const response = await servercall(text);
+    const assistantMsg = document.createElement('div');
+    assistantMsg.className = 'max-w-fit'
+    assistantMsg.textContent = response;
+    chatContainer.appendChild(assistantMsg);
+}
+
+async function servercall(text) {
+    const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
