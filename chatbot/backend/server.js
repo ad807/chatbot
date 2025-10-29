@@ -13,8 +13,8 @@ app.listen(8000, () => {
 });
 
 app.post('/chat', async (req, res) => {
-    const { text } = req.body;
+    const { text, threadid } = req.body;
     console.log(text);
-    const response =await generateResponse(text);
+    const response =await generateResponse(text,threadid);
     res.json({ message: response });
 });

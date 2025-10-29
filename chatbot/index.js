@@ -2,6 +2,7 @@ const input = document.querySelector('#input');
 const ask = document.querySelector('#ask');
 const chatContainer = document.querySelector('#chat-container');
 
+const threadid = Date.now().toString(36) + Math.random().toString(36).substring(2, 15);
 ask.addEventListener('click', handleAsk);
 
 input.addEventListener('keyup', (event) => {
@@ -40,7 +41,7 @@ async function servercall(text) {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, threadid }),
     });
     if (!response.ok) {
         throw new Error('Failed to generate response');

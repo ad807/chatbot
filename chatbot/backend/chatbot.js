@@ -1,49 +1,65 @@
 import groq from "groq-sdk";
 import dotenv from "dotenv";
 import {tavily} from "@tavily/core";
+import NodeCache from 'node-cache'
 dotenv.config();
 const tvly = tavily({apiKey:process.env.TAVILY_API_KEY});
 const client = new groq({apiKey: process.env.GROQ_API_KEY,});
 
 
+const cache = new NodeCache({stdTTL: 60 * 60 * 24});
 
 
-async function generateResponse(query) {     
+
+
+async function generateResponse(query, threadid) {     
 
 
    
-        const messages = [
+        const base_messages = [
             {
                 role: 'system',
-                content: `You are a smart personal assistant.
-                        If you know the answer to a question, answer it directly in plain English.
-                        If the answer requires real-time, local, or up-to-date information, or if you don’t know the answer, use the available tools to find it.
-                        You have access to the following tool:
-                        webSearch(query: string): Use this to search the internet for current or unknown information.
-                        Decide when to use your own knowledge and when to use the tool.
-                        Do not mention the tool unless needed.
-    
-                        Examples:
-                        Q: What is the capital of France?
-                        A: The capital of France is Paris.
-    
-                        Q: What’s the weather in Mumbai right now?
-                        A: (use the search tool to find the latest weather)
-    
-                        Q: Who is the Prime Minister of India?
-                        A: (use the search tool to get the latest news).
-    
-                        Q: Tell me the latest IT news.
-                        A: (use the search tool to get the latest news)
-    
-                        current date and time: ${new Date().toUTCString()}`,
-            },
-            {
-                role: "user",
-                content: query
+                content:`You are a smart personal assistant.
+        If you know the answer to a question, answer it directly in plain English.
+        If the answer requires real-time, local, or up-to-date information, or if you don't know the answer, use the available tools to find it.
+        
+        IMPORTANT: Do NOT search for personal information about the user (like their name, age, etc.) that you don't have access to. Simply say you don't know.
+        
+        You have access to the following tool:
+        webSearch(query: string): Use this to search the internet for current or unknown information about events, news, weather, facts, etc.
+        Decide when to use your own knowledge and when to use the tool.
+        Do not mention the tool unless needed.
+
+        Examples:
+        Q: What is the capital of France?
+        A: The capital of France is Paris.
+
+        Q: What's the weather in Mumbai right now?
+        A: (use the search tool to find the latest weather)
+
+        Q: What is my name?
+        A: I don't have access to your personal information.
+        
+        Q: Tell me the latest IT news.
+        A: (use the search tool to get the latest news)
+
+        current date and time: ${new Date().toUTCString()}`,
             },
            
+           
         ]
+ 
+        const messages = threadid?(cache.get(threadid) || base_messages):base_messages;
+
+        messages.push({
+            role: "user",
+            content: query
+        });
+
+
+
+
+
         let max_retries = 5;
         while (true) {
 
@@ -80,6 +96,7 @@ async function generateResponse(query) {
         const toolCalls = chatCompletion.choices[0].message.tool_calls;
         
         if (!toolCalls) {
+            cache.set(threadid, messages);
             return chatCompletion.choices[0].message.content;
         }
         
@@ -109,7 +126,9 @@ async function generateResponse(query) {
       
       async function webSearch({query}) {
         const result = await tvly.search(query);
-        return result;
+
+        const final_result = result.results.map(result => result.content).join("\n");
+        return final_result;
       }
 
       export { generateResponse };
